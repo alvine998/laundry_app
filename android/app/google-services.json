@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "654812161066",
+    "project_id": "teman-k3",
+    "storage_bucket": "teman-k3.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654812161066:android:e331967e16abdb772c0f53",
+        "android_client_info": {
+          "package_name": "com.laundry_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApZIag6f7Peydjg04ZERpRowD8YNxTazE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
