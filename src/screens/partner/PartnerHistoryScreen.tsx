@@ -12,17 +12,21 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import normalize from 'react-native-normalize';
 import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
 
 const MOCK_HISTORY = [
   { id: 'ORD-001', customer: 'Budi Santoso', service: 'Cuci & Gosok', date: '31 Mar, 10:30', price: 'Rp 35.000', status: 'Selesai' },
   { id: 'ORD-002', customer: 'Siti Aminah', service: 'Bedding', date: '30 Mar, 14:15', price: 'Rp 80.000', status: 'Selesai' },
   { id: 'ORD-003', customer: 'Andi Pratama', service: 'Cuci Saja', date: '29 Mar, 09:45', price: 'Rp 25.000', status: 'Selesai' },
-  { id: 'ORD-004', customer: 'Rina Wijaya', service: 'Expressed', date: '28 Mar, 16:20', price: 'Rp 50.000', status: 'Dibatalkan' },
+  { id: 'ORD-004', customer: 'Rina Wijaya', service: 'Expressed', date: '28 Mar, 16:20', price: 'Rp 50.000', status: 'Batal' },
   { id: 'ORD-005', customer: 'Eko Sulistyo', service: 'Cuci & Gosok', date: '27 Mar, 11:10', price: 'Rp 42.000', status: 'Selesai' },
 ];
 
 export const PartnerHistoryScreen = () => {
-  const [activeTab, setActiveTab] = useState<'Selesai' | 'Dibatalkan'>('Selesai');
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [activeTab, setActiveTab] = useState<'Selesai' | 'Batal'>('Selesai');
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = React.useCallback(() => {
@@ -49,10 +53,10 @@ export const PartnerHistoryScreen = () => {
           <Text style={[styles.tabText, activeTab === 'Selesai' && styles.activeTabText]}>Selesai</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.tab, activeTab === 'Dibatalkan' && styles.activeTab]}
-          onPress={() => setActiveTab('Dibatalkan')}
+          style={[styles.tab, activeTab === 'Batal' && styles.activeTab]}
+          onPress={() => setActiveTab('Batal')}
         >
-          <Text style={[styles.tabText, activeTab === 'Dibatalkan' && styles.activeTabText]}>Dibatalkan</Text>
+          <Text style={[styles.tabText, activeTab === 'Batal' && styles.activeTabText]}>Batal</Text>
         </TouchableOpacity>
       </View>
 
@@ -91,7 +95,10 @@ export const PartnerHistoryScreen = () => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.detailBtn}>
+            <TouchableOpacity 
+              style={styles.detailBtn}
+              onPress={() => navigation.navigate('PartnerOrderDetail', { order: item })}
+            >
               <Text style={styles.detailBtnText}>Lihat Rincian</Text>
               <Ionicons name="chevron-forward" size={normalize(14)} color="#94A3B8" />
             </TouchableOpacity>

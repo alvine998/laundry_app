@@ -9,6 +9,7 @@ import {
   TextInput,
   FlatList,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -69,10 +70,19 @@ const MOCK_ORDERS = [
 export const PartnerOrderListScreen = ({ navigation }: Props) => {
   const [activeTab, setActiveTab] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'accept' | 'reject' | 'update'>('accept');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [actualWeight, setActualWeight] = useState('');
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    // Simulate data fetching
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1500);
+  }, []);
 
   const openModal = (type: 'accept' | 'reject' | 'update', order: any) => {
     setModalType(type);
@@ -85,11 +95,11 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
     setModalVisible(false);
     let message = '';
     const weightInfo = actualWeight ? ` dengan berat ${actualWeight} Kg` : '';
-    
+
     if (modalType === 'accept') {
       const isWeightBased = selectedOrder?.weight?.toLowerCase().includes('kg');
       let adjustmentMsg = '';
-      
+
       if (isWeightBased && actualWeight) {
         const estWeight = parseWeight(selectedOrder.weight);
         const estPrice = parsePrice(selectedOrder.price);
@@ -104,7 +114,7 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
           adjustmentMsg = `. Kembali saldo: ${formatCurrency(adjustment)}`;
         }
       }
-      
+
       message = `Pesanan ${selectedOrder?.id} berhasil diterima${weightInfo}${adjustmentMsg}!`;
     } else if (modalType === 'reject') {
       message = `Pesanan ${selectedOrder?.id} berhasil ditolak.`;
@@ -131,7 +141,7 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
     const colors = getStatusColor(item.status);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.orderCard}
         onPress={() => navigation.navigate('PartnerOrderDetail', { order: item })}
       >
@@ -161,13 +171,13 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
         <View style={styles.orderFooter}>
           {item.status !== 'Selesai' && item.status !== 'Batal' && (
             <View style={styles.orderActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.actionBtn, styles.declineBtn]}
                 onPress={() => openModal('reject', item)}
               >
                 <Text style={styles.declineText}>Tolak</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.actionBtn, styles.acceptBtn]}
                 onPress={() => openModal(item.status === 'Baru' ? 'accept' : 'update', item)}
               >
@@ -177,10 +187,10 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
               </TouchableOpacity>
             </View>
           )}
-          <View style={styles.detailBtn}>
+          {/* <View style={styles.detailBtn}>
             <Text style={styles.detailBtnText}>Lihat Rincian</Text>
             <Ionicons name="chevron-forward" size={normalize(16)} color="#64748B" />
-          </View>
+          </View> */}
         </View>
       </TouchableOpacity>
     );
@@ -229,6 +239,14 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#0084F4']}
+            tintColor="#0084F4"
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="clipboard-text-outline" size={normalize(64)} color="#E2E8F0" />
@@ -248,22 +266,22 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={[styles.modalIconContainer, { backgroundColor: modalType === 'reject' ? '#FEE2E2' : '#DBEAFE' }]}>
-              <MaterialCommunityIcons 
-                name={modalType === 'reject' ? 'close-circle' : (modalType === 'accept' ? 'check-circle' : 'refresh-circle')} 
-                size={normalize(48)} 
-                color={modalType === 'reject' ? '#EF4444' : '#0084F4'} 
+              <MaterialCommunityIcons
+                name={modalType === 'reject' ? 'close-circle' : (modalType === 'accept' ? 'check-circle' : 'refresh-circle')}
+                size={normalize(48)}
+                color={modalType === 'reject' ? '#EF4444' : '#0084F4'}
               />
             </View>
-            
+
             <Text style={styles.modalTitle}>
               {modalType === 'accept' ? 'Terima Pesanan?' : (modalType === 'reject' ? 'Tolak Pesanan?' : `Update ke ${getNextStatus(selectedOrder?.status)}?`)}
             </Text>
-            
+
             <Text style={styles.modalSubtitle}>
-              {modalType === 'accept' 
-                ? `Apakah Anda yakin ingin menerima pesanan ${selectedOrder?.id} dari ${selectedOrder?.customer}?` 
-                : (modalType === 'reject' 
-                  ? `Pesanan ${selectedOrder?.id} akan dibatalkan. Berikan alasan penolakan kepada pelanggan.` 
+              {modalType === 'accept'
+                ? `Apakah Anda yakin ingin menerima pesanan ${selectedOrder?.id} dari ${selectedOrder?.customer}?`
+                : (modalType === 'reject'
+                  ? `Pesanan ${selectedOrder?.id} akan dibatalkan. Berikan alasan penolakan kepada pelanggan.`
                   : `Lanjutkan pesanan ${selectedOrder?.id} ke status ${getNextStatus(selectedOrder?.status)}?`)}
             </Text>
 
@@ -293,7 +311,7 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
                     <View style={styles.adjustmentRow}>
                       <Text style={styles.adjustmentLabel}>Selisih:</Text>
                       <Text style={[
-                        styles.adjustmentValue, 
+                        styles.adjustmentValue,
                         { color: parseFloat(actualWeight) - parseWeight(selectedOrder.weight) > 0 ? '#F59E0B' : '#10B981' }
                       ]}>
                         {parseFloat(actualWeight) - parseWeight(selectedOrder.weight) > 0 ? '+' : ''}
@@ -301,18 +319,18 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
                       </Text>
                     </View>
                     <View style={[
-                      styles.adjustmentResult, 
+                      styles.adjustmentResult,
                       { backgroundColor: parseFloat(actualWeight) - parseWeight(selectedOrder.weight) > 0 ? '#FFF7ED' : '#F0FDF4' }
                     ]}>
                       <Text style={[
                         styles.adjustmentResultText,
                         { color: parseFloat(actualWeight) - parseWeight(selectedOrder.weight) > 0 ? '#C2410C' : '#15803D' }
                       ]}>
-                        {parseFloat(actualWeight) - parseWeight(selectedOrder.weight) > 0 
-                          ? `Sisa Bayar: ${formatCurrency((parseFloat(actualWeight) - parseWeight(selectedOrder.weight)) * (parsePrice(selectedOrder.price) / parseWeight(selectedOrder.weight)))}` 
+                        {parseFloat(actualWeight) - parseWeight(selectedOrder.weight) > 0
+                          ? `Sisa Bayar: ${formatCurrency((parseFloat(actualWeight) - parseWeight(selectedOrder.weight)) * (parsePrice(selectedOrder.price) / parseWeight(selectedOrder.weight)))}`
                           : parseFloat(actualWeight) - parseWeight(selectedOrder.weight) < 0
-                          ? `Kembali Saldo: ${formatCurrency((parseFloat(actualWeight) - parseWeight(selectedOrder.weight)) * (parsePrice(selectedOrder.price) / parseWeight(selectedOrder.weight)))}`
-                          : 'Berat Pas'}
+                            ? `Kembali Saldo: ${formatCurrency((parseFloat(actualWeight) - parseWeight(selectedOrder.weight)) * (parsePrice(selectedOrder.price) / parseWeight(selectedOrder.weight)))}`
+                            : 'Berat Pas'}
                       </Text>
                     </View>
                   </View>
@@ -321,18 +339,18 @@ export const PartnerOrderListScreen = ({ navigation }: Props) => {
             )}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalCancelBtn} 
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.modalCancelText}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.modalConfirmBtn, 
+                  styles.modalConfirmBtn,
                   { backgroundColor: modalType === 'reject' ? '#EF4444' : '#0084F4' },
                   modalType === 'accept' && selectedOrder?.weight?.toLowerCase().includes('kg') && !actualWeight && styles.modalConfirmBtnDisabled
-                ]} 
+                ]}
                 onPress={handleConfirmAction}
                 disabled={modalType === 'accept' && selectedOrder?.weight?.toLowerCase().includes('kg') && !actualWeight}
               >
