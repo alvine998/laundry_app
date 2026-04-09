@@ -15,6 +15,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import normalize from 'react-native-normalize';
 import { RootStackParamList } from '../../types/navigation';
+import { StorageService } from '../../services/StorageService';
 import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PartnerOrderDetail'>;
@@ -41,19 +42,13 @@ const getStatusColor = (status: string) => {
 };
 
 const parsePrice = (priceStr: string) => {
+  if (!priceStr) return 0;
   return parseInt(priceStr.replace(/[^0-9]/g, ''), 10);
 };
 
 const parseWeight = (weightStr: string) => {
+  if (!weightStr) return 0;
   return parseFloat(weightStr.replace(/[^0-9.]/g, ''));
-};
-
-const formatCurrency = (num: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(Math.abs(num));
 };
 
 export const PartnerOrderDetailScreen = ({ navigation, route }: Props) => {
@@ -79,11 +74,27 @@ export const PartnerOrderDetailScreen = ({ navigation, route }: Props) => {
     setModalVisible(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     setModalVisible(false);
     let message = '';
     const weightInfo = actualWeight ? ` dengan berat ${actualWeight} Kg` : '';
     
+    // Determine new status
+    let newStatus = order.status;
+    if (modalType === 'accept') {
+      newStatus = 'Pesanan Diterima';
+    } else if (modalType === 'reject') {
+      newStatus = 'Batal';
+    } else {
+      newStatus = nextStatus || order.status;
+    }
+
+    // Update Persistent Storage
+    await StorageService.updateActiveOrder(order.id, { 
+      status: newStatus as any,
+      weight: actualWeight ? `${actualWeight} Kg` : order.weight
+    });
+
     if (modalType === 'accept') {
       message = `Pesanan ${order.id} berhasil diterima${weightInfo}!`;
     } else if (modalType === 'reject') {
@@ -97,7 +108,9 @@ export const PartnerOrderDetailScreen = ({ navigation, route }: Props) => {
       text1: message,
       position: 'bottom',
     });
-    setTimeout(() => navigation.goBack(), 1000);
+    
+    // Go back after a short delay
+    setTimeout(() => navigation.goBack(), 1200);
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  Easing,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -27,17 +29,56 @@ const TRACKING_STEPS = [
 export const OrderTrackingScreen = ({ navigation, route }: Props) => {
   const { orderId } = route.params;
   const [order, setOrder] = useState<ActiveOrder | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // Real-time Polling Simulation
   useEffect(() => {
     const fetchOrder = async () => {
       const orders = await StorageService.getActiveOrders();
       const foundOrder = orders.find(o => o.id === orderId);
       if (foundOrder) {
+        // If status changed to 'Pesanan Diterima', trigger "Finding Courier" simulation
+        if (foundOrder.status === 'Pesanan Diterima' && (!order || order.status === 'Pesanan Diterima')) {
+          setIsSearching(true);
+        } else if (foundOrder.status !== 'Pesanan Diterima') {
+          setIsSearching(false);
+        }
         setOrder(foundOrder);
       }
     };
-    fetchOrder();
-  }, [orderId]);
+
+    fetchOrder(); // Initial fetch
+
+    // Poll every 3 seconds
+    const interval = setInterval(fetchOrder, 3000);
+
+    return () => clearInterval(interval);
+  }, [orderId, order]);
+
+  // Pulse Animation for "Finding Courier"
+  useEffect(() => {
+    if (isSearching) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isSearching]);
 
   if (!order) return null;
 
@@ -61,13 +102,15 @@ export const OrderTrackingScreen = ({ navigation, route }: Props) => {
               <Text style={styles.orderIdText}>ID Pesanan: {order.id}</Text>
               <Text style={styles.orderDateText}>{order.date}</Text>
             </View>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{order.status}</Text>
+            <View style={[styles.statusBadge, isSearching && styles.statusBadgeSearching]}>
+              <Text style={[styles.statusText, isSearching && styles.statusTextSearching]}>
+                {isSearching ? 'Mencari Kurir...' : order.status}
+              </Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.partnerRow}>
             <View style={styles.partnerIcon}>
               <MaterialCommunityIcons name="storefront-outline" size={normalize(24)} color="#0084F4" />
@@ -79,10 +122,27 @@ export const OrderTrackingScreen = ({ navigation, route }: Props) => {
           </View>
         </View>
 
+        {/* Searching Animation Block */}
+        {isSearching && (
+          <View style={styles.searchingBlock}>
+            <Animated.View style={[styles.searchingIconBox, { transform: [{ scale: pulseAnim }] }]}>
+              <MaterialCommunityIcons name="magnify" size={normalize(32)} color="#0084F4" />
+            </Animated.View>
+            <Text style={styles.searchingTitle}>Sedang Mencari Kurir</Text>
+            <Text style={styles.searchingSubtitle}>Mohon tunggu sebentar, kami sedang menugaskan kurir terdekat untuk menjemput laundry-mu.</Text>
+          </View>
+        )}
+
         {/* Tracking Stepper */}
         <View style={styles.trackingContainer}>
-          <Text style={styles.trackingTitle}>Status Pengiriman</Text>
-          
+          <View style={styles.trackingHeaderRow}>
+            <Text style={styles.trackingTitle}>Status Pengiriman</Text>
+            <View style={styles.liveIndicator}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          </View>
+
           {TRACKING_STEPS.map((step, index) => {
             const isCompleted = index <= currentStepIndex;
             const isCurrent = index === currentStepIndex;
@@ -95,10 +155,10 @@ export const OrderTrackingScreen = ({ navigation, route }: Props) => {
                     styles.stepDot,
                     isCompleted ? styles.stepDotCompleted : styles.stepDotPending
                   ]}>
-                    <MaterialCommunityIcons 
-                      name={step.icon as any} 
-                      size={normalize(18)} 
-                      color={isCompleted ? "#FFFFFF" : "#94A3B8"} 
+                    <MaterialCommunityIcons
+                      name={step.icon as any}
+                      size={normalize(18)}
+                      color={isCompleted ? "#FFFFFF" : "#94A3B8"}
                     />
                   </View>
                   {!isLast && (
@@ -108,7 +168,7 @@ export const OrderTrackingScreen = ({ navigation, route }: Props) => {
                     ]} />
                   )}
                 </View>
-                
+
                 <View style={styles.stepRightPane}>
                   <Text style={[
                     styles.stepTitle,
@@ -117,7 +177,11 @@ export const OrderTrackingScreen = ({ navigation, route }: Props) => {
                   ]}>
                     {step.title}
                   </Text>
-                  <Text style={styles.stepDesc}>{step.desc}</Text>
+                  <Text style={styles.stepDesc}>
+                    {isCurrent && isSearching && step.id === 'Pesanan Diterima'
+                      ? 'Menghubungkan ke kurir...'
+                      : step.desc}
+                  </Text>
                 </View>
               </View>
             );
@@ -163,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: normalize(24),
     padding: normalize(20),
-    marginBottom: normalize(25),
+    marginBottom: normalize(20),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -192,10 +256,16 @@ const styles = StyleSheet.create({
     paddingVertical: normalize(6),
     borderRadius: normalize(20),
   },
+  statusBadgeSearching: {
+    backgroundColor: '#FFFBEB',
+  },
   statusText: {
     fontSize: normalize(12),
     fontWeight: '700',
     color: '#0084F4',
+  },
+  statusTextSearching: {
+    color: '#D97706',
   },
   divider: {
     height: 1,
@@ -225,6 +295,37 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: normalize(2),
   },
+  searchingBlock: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: normalize(24),
+    padding: normalize(24),
+    alignItems: 'center',
+    marginBottom: normalize(20),
+    borderWidth: 2,
+    borderColor: '#EFF6FF',
+    borderStyle: 'dashed',
+  },
+  searchingIconBox: {
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: normalize(16),
+  },
+  searchingTitle: {
+    fontSize: normalize(16),
+    fontWeight: '800',
+    color: '#1C1C1E',
+    marginBottom: normalize(8),
+  },
+  searchingSubtitle: {
+    fontSize: normalize(13),
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: normalize(20),
+  },
   trackingContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: normalize(24),
@@ -235,11 +336,36 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+  trackingHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: normalize(24),
+  },
   trackingTitle: {
     fontSize: normalize(16),
     fontWeight: '800',
     color: '#1C1C1E',
-    marginBottom: normalize(24),
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(8),
+  },
+  liveDot: {
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(3),
+    backgroundColor: '#EF4444',
+    marginRight: normalize(6),
+  },
+  liveText: {
+    fontSize: normalize(10),
+    fontWeight: '900',
+    color: '#EF4444',
   },
   stepItem: {
     flexDirection: 'row',

@@ -17,6 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import normalize from 'react-native-normalize';
 import { RootStackParamList } from '../../types/navigation';
 import { Button } from '../../components/Button';
+import { AuthService } from '../../services/AuthService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PartnerRegister'>;
 
@@ -25,8 +26,10 @@ export const PartnerRegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
     // Basic Validation
@@ -42,27 +45,37 @@ export const PartnerRegisterScreen: React.FC<Props> = ({ navigation }) => {
     if (!phone.trim() || phone.length < 10) {
       return showToast('error', 'Nomor Telepon tidak valid!');
     }
+    if (!password.trim() || password.length < 6) {
+      return showToast('error', 'Password minimal 6 karakter!');
+    }
     if (!address.trim()) {
       return showToast('error', 'Alamat wajib diisi!');
     }
 
     setIsLoading(true);
     try {
-      // In a real app, this would call an API
-      // For now, we simulate success and move to OTP verification
-      console.log('Registering partner:', { laundryName, ownerName, email, phone, address });
+      // Call Backend API
+      await AuthService.register({
+        name: ownerName,
+        email: email,
+        phone: phone,
+        password: password,
+        role: 'partner',
+        shop_name: laundryName,
+        address: address,
+      });
       
       Toast.show({
         type: 'success',
         text1: 'Pendaftaran Berhasil!',
-        text2: 'Mohon verifikasi email Anda.',
+        text2: 'Mohon verifikasi nomor telepon Anda.',
         position: 'top',
       });
 
       // Navigate to OTP for verification
-      navigation.navigate('OTP', { email, type: 'partner' });
-    } catch (error) {
-      showToast('error', 'Gagal mendaftar. Silakan coba lagi.');
+      navigation.navigate('OTP', { email, phone, type: 'partner' });
+    } catch (error: any) {
+      showToast('error', error.message || 'Gagal mendaftar. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -169,6 +182,29 @@ export const PartnerRegisterScreen: React.FC<Props> = ({ navigation }) => {
                   onChangeText={setPhone}
                   placeholderTextColor="#9CA3AF"
                 />
+              </View>
+            </View>
+
+            {/* Password */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Kata Sandi</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={normalize(20)} color="#94A3B8" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Minimal 6 karakter"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#9CA3AF"
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons 
+                    name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={normalize(20)} 
+                    color="#64748B" 
+                  />
+                </TouchableOpacity>
               </View>
             </View>
 

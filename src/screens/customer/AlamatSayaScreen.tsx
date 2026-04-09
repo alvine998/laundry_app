@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,48 +13,35 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import normalize from 'react-native-normalize';
 import { RootStackParamList } from '../../types/navigation';
+import { StorageService } from '../../services/StorageService';
+import { Address } from '../../types/address';
 import Toast from 'react-native-toast-message';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AlamatSaya'>;
 
-interface Address {
-  id: string;
-  label: string;
-  name: string;
-  phone: string;
-  address: string;
-  isDefault: boolean;
-  icon: string;
-}
-
-const MOCK_ADDRESSES: Address[] = [
-  {
-    id: '1',
-    label: 'Rumah',
-    name: 'Alvin Nugraha',
-    phone: '0812-3456-7890',
-    address: 'Jl. Sudirman No. 123, RT 05/RW 03, Kel. Senayan, Kec. Kebayoran Baru, Jakarta Selatan 12190',
-    isDefault: true,
-    icon: 'home-outline',
-  },
-  {
-    id: '2',
-    label: 'Kantor',
-    name: 'Alvin Nugraha',
-    phone: '0812-3456-7890',
-    address: 'Gedung Wisma 46, Lantai 21, Jl. Jend. Sudirman Kav. 1, Jakarta Pusat 10220',
-    isDefault: false,
-    icon: 'office-building-outline',
-  },
-];
-
 export const AlamatSayaScreen = ({ navigation }: Props) => {
-  const [addresses, setAddresses] = useState<Address[]>(MOCK_ADDRESSES);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSetDefault = (id: string) => {
-    setAddresses(prev =>
-      prev.map(addr => ({ ...addr, isDefault: addr.id === id }))
-    );
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadAddresses();
+    });
+
+    loadAddresses();
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadAddresses = async () => {
+    setIsLoading(true);
+    const data = await StorageService.getAddresses();
+    setAddresses(data);
+    setIsLoading(false);
+  };
+
+  const handleSetDefault = async (id: string) => {
+    await StorageService.setDefaultAddress(id);
+    loadAddresses();
     Toast.show({ type: 'success', text1: 'Alamat utama berhasil diubah' });
   };
 
@@ -64,12 +51,21 @@ export const AlamatSayaScreen = ({ navigation }: Props) => {
       {
         text: 'Hapus',
         style: 'destructive',
-        onPress: () => {
-          setAddresses(prev => prev.filter(a => a.id !== id));
+        onPress: async () => {
+          await StorageService.deleteAddress(id);
+          loadAddresses();
           Toast.show({ type: 'success', text1: 'Alamat berhasil dihapus' });
         },
       },
     ]);
+  };
+
+  const handleEdit = (address: Address) => {
+    navigation.navigate('ManageAlamat', { address });
+  };
+
+  const handleAdd = () => {
+    navigation.navigate('ManageAlamat', {});
   };
 
   return (
@@ -108,7 +104,17 @@ export const AlamatSayaScreen = ({ navigation }: Props) => {
                   <Text style={styles.actionTextBlue}>Jadikan Utama</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
+              <TouchableOpacity 
+                style={[styles.actionBtn, { marginLeft: item.isDefault ? 0 : normalize(20) }]} 
+                onPress={() => handleEdit(item)}
+              >
+                <MaterialCommunityIcons name="pencil-outline" size={normalize(16)} color="#64748B" />
+                <Text style={styles.actionTextGray}>Ubah</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.actionBtn, { marginLeft: normalize(20) }]} 
+                onPress={() => handleDelete(item.id)}
+              >
                 <MaterialCommunityIcons name="trash-can-outline" size={normalize(16)} color="#EF4444" />
                 <Text style={styles.actionTextRed}>Hapus</Text>
               </TouchableOpacity>
@@ -116,7 +122,7 @@ export const AlamatSayaScreen = ({ navigation }: Props) => {
           </View>
         ))}
 
-        {addresses.length === 0 && (
+        {!isLoading && addresses.length === 0 && (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="map-marker-off-outline" size={normalize(64)} color="#E2E8F0" />
             <Text style={styles.emptyTitle}>Belum ada alamat</Text>
@@ -126,7 +132,7 @@ export const AlamatSayaScreen = ({ navigation }: Props) => {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.addBtn} activeOpacity={0.8} onPress={handleAdd}>
           <Ionicons name="add-circle" size={normalize(20)} color="#FFFFFF" />
           <Text style={styles.addBtnText}>Tambah Alamat Baru</Text>
         </TouchableOpacity>
@@ -169,9 +175,10 @@ const styles = StyleSheet.create({
   cardPhone: { fontSize: normalize(13), fontWeight: '600', color: '#64748B', marginBottom: normalize(8) },
   cardAddress: { fontSize: normalize(13), color: '#475569', lineHeight: normalize(20) },
   cardActions: { flexDirection: 'row', marginTop: normalize(16), borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: normalize(12) },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: normalize(20) },
+  actionBtn: { flexDirection: 'row', alignItems: 'center' },
   actionTextBlue: { fontSize: normalize(12), fontWeight: '700', color: '#0084F4', marginLeft: normalize(6) },
   actionTextRed: { fontSize: normalize(12), fontWeight: '700', color: '#EF4444', marginLeft: normalize(6) },
+  actionTextGray: { fontSize: normalize(12), fontWeight: '700', color: '#64748B', marginLeft: normalize(6) },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: normalize(80) },
   emptyTitle: { fontSize: normalize(18), fontWeight: '800', color: '#1C1C1E', marginTop: normalize(16) },
   emptySubtitle: { fontSize: normalize(14), color: '#64748B', marginTop: normalize(8), textAlign: 'center' },

@@ -37,6 +37,7 @@ import { PartnerDetailScreen } from './src/screens/customer/PartnerDetailScreen'
 import { InboxDetailScreen } from './src/screens/customer/InboxDetailScreen';
 import { EditProfileScreen } from './src/screens/customer/EditProfileScreen';
 import { AlamatSayaScreen } from './src/screens/customer/AlamatSayaScreen';
+import { ManageAlamatScreen } from './src/screens/customer/ManageAlamatScreen';
 import { VoucherSayaScreen } from './src/screens/customer/VoucherSayaScreen';
 import { PusatBantuanScreen } from './src/screens/PusatBantuanScreen';
 import { SyaratKetentuanScreen } from './src/screens/SyaratKetentuanScreen';
@@ -117,6 +118,7 @@ export default function App() {
             <Stack.Screen name="InboxDetail" component={InboxDetailScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="AlamatSaya" component={AlamatSayaScreen} />
+            <Stack.Screen name="ManageAlamat" component={ManageAlamatScreen} />
             <Stack.Screen name="VoucherSaya" component={VoucherSayaScreen} />
             <Stack.Screen name="PusatBantuan" component={PusatBantuanScreen} />
             <Stack.Screen name="SyaratKetentuan" component={SyaratKetentuanScreen} />

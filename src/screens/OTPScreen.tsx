@@ -15,13 +15,15 @@ import normalize from 'react-native-normalize';
 import { RootStackParamList } from '../types/navigation';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/StorageService';
+import { AuthService } from '../services/AuthService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTP'>;
 
 export const OTPScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { email, type } = route.params;
+  const { email, phone, type } = route.params;
   const [code, setCode] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(30);
+  const [isLoading, setIsLoading] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
@@ -63,38 +65,69 @@ export const OTPScreen: React.FC<Props> = ({ route, navigation }) => {
       return;
     }
 
-    // Mock verification
-    await StorageService.setUserSession({
-      email,
-      type,
-      loginDate: new Date().toISOString(),
-      balance: 50000,
-      loyaltyPoints: 0,
-    });
+    setIsLoading(true);
+    try {
+      // Call Backend API
+      const result = await AuthService.verifyOTP(phone, fullCode);
 
-    Toast.show({
-      type: 'success',
-      text1: 'Verifikasi Berhasil!',
-      text2: 'Selamat datang di Laundry Now.',
-      position: 'top',
-    });
+      // Save session to storage
+      await StorageService.setUserSession({
+        id: result.user?.id || 'id-' + Date.now(),
+        email,
+        type,
+        name: result.user?.name || (type === 'partner' ? 'Partner Laundry' : 'Pelanggan'),
+        loginDate: new Date().toISOString(),
+        balance: result.user?.balance || (type === 'partner' ? 0 : 50000),
+        loyaltyPoints: result.user?.loyalty_points || 0,
+        token: result.token,
+      });
 
-    // Reset navigation stack to the correct dashboard based on user type
-    navigation.reset({
-      index: 0,
-      routes: [{ name: type === 'partner' ? 'PartnerHome' : 'CustomerHome' }],
-    });
-  };
-
-  const handleResend = () => {
-    if (timer === 0) {
-      setTimer(30);
       Toast.show({
-        type: 'info',
-        text1: 'Kode Dikirim Ulang',
-        text2: 'Silakan cek kotak masuk email Anda.',
+        type: 'success',
+        text1: 'Verifikasi Berhasil!',
+        text2: 'Selamat datang di Laundry Now.',
         position: 'top',
       });
+
+      // Reset navigation stack to the correct dashboard based on user type
+      navigation.reset({
+        index: 0,
+        routes: [{ name: type === 'partner' ? 'PartnerHome' : 'CustomerHome' }],
+      });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Verifikasi Gagal',
+        text2: error.message || 'Kode OTP yang dimasukkan salah.',
+        position: 'top',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (timer === 0) {
+      setIsLoading(true);
+      try {
+        await AuthService.sendOTP(phone);
+        setTimer(30);
+        Toast.show({
+          type: 'success',
+          text1: 'Kode Dikirim Ulang',
+          text2: `Kode baru telah dikirimkan ke nomor ${phone}.`,
+          position: 'top',
+        });
+      } catch (error: any) {
+        Toast.show({
+          type: 'error',
+          text1: 'Gagal Mengirim Kode',
+          text2: error.message || 'Silakan coba lagi beberapa saat lagi.',
+          position: 'top',
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 

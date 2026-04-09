@@ -14,7 +14,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CustomerLogin'>;
 
 export const CustomerLoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !email.includes('@')) {
@@ -27,7 +29,44 @@ export const CustomerLoginScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    navigation.navigate('OTP', { email, type: 'customer' });
+    if (!password.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password wajib diisi!',
+        position: 'top',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await AuthService.login({ email, password });
+      
+      // If the user is already verified and has a token, we could navigate to Home directly
+      // But based on the flow, we might still want to show OTP for 2FA or initial verification
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Login Berhasil!',
+        text2: 'Mohon masukkan kode verifikasi.',
+        position: 'top',
+      });
+
+      navigation.navigate('OTP', { 
+        email, 
+        phone: result.phone || '08123456789', // Use phone from result or fallback
+        type: 'customer' 
+      });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Gagal Masuk',
+        text2: error.message || 'Email atau password salah.',
+        position: 'top',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -70,19 +109,49 @@ export const CustomerLoginScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.welcomeText}>Halo, Pelanggan!</Text>
         <Text style={styles.subtitleText}>Gunakan email Anda untuk masuk atau mendaftar di Laundry Now.</Text>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="nama@email.com"
-            keyboardType="email-address"
-            placeholderTextColor="#9CA3AF"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-          />
+        <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="nama@email.com"
+              keyboardType="email-address"
+              placeholderTextColor="#9CA3AF"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+            />
+          </View>
         </View>
 
-        <Button title="Lanjut" onPress={handleLogin} variant="primary" />
+        <View style={styles.inputWrapper}>
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Masukkan password Anda"
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons 
+                name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                size={normalize(20)} 
+                color="#64748B" 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <Button 
+          title={isLoading ? "Memproses..." : "Lanjut"} 
+          onPress={handleLogin} 
+          variant="primary" 
+          disabled={isLoading}
+        />
 
         <View style={styles.dividerContainer}>
           <View style={styles.dividerLine} />
@@ -154,6 +223,16 @@ const styles = StyleSheet.create({
     lineHeight: normalize(22),
     marginBottom: normalize(32),
   },
+  inputWrapper: {
+    marginBottom: normalize(20),
+  },
+  label: {
+    fontSize: normalize(14),
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: normalize(8),
+    marginLeft: normalize(4),
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,7 +241,6 @@ const styles = StyleSheet.create({
     borderRadius: normalize(16),
     paddingHorizontal: normalize(16),
     paddingVertical: normalize(14),
-    marginBottom: normalize(32),
     backgroundColor: '#F8FAFC',
   },
   input: {

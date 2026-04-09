@@ -1,9 +1,11 @@
+import { Address } from './address';
+
 export type RootStackParamList = {
   Onboarding: undefined;
   CustomerLogin: undefined;
   PartnerLogin: undefined;
   PartnerRegister: undefined;
-  OTP: { email: string; type: 'customer' | 'partner' };
+  OTP: { email: string; phone: string; type: 'customer' | 'partner' };
   CustomerHome: undefined;
   PartnerHome: undefined;
   MapPicker: { onSelect: (address: string) => void };
@@ -42,6 +44,7 @@ export type RootStackParamList = {
   };
   EditProfile: undefined;
   AlamatSaya: undefined;
+  ManageAlamat: { address?: Address };
   VoucherSaya: undefined;
   PusatBantuan: { type: 'customer' | 'partner' };
   SyaratKetentuan: undefined;

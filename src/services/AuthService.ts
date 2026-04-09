@@ -1,5 +1,6 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
+import { API_URL, API_CONFIG } from '../config/api';
 
 // Configure Google Sign-In
 // Note: webClientId is required for Firebase to work. 
@@ -10,6 +11,105 @@ GoogleSignin.configure({
 });
 
 export const AuthService = {
+  /**
+   * Registers a new user via the Express Backend
+   */
+  async register(data: any) {
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        ...API_CONFIG,
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Registration failed');
+      }
+
+      return responseData;
+    } catch (error) {
+      console.error('Register API Error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Logs a user in via the Express Backend
+   */
+  async login(data: any) {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        ...API_CONFIG,
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Login failed');
+      }
+
+      // Here you would typically save the JWT token to secure storage
+      // e.g., await AsyncStorage.setItem('token', responseData.token);
+
+      return responseData;
+    } catch (error) {
+      console.error('Login API Error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sends or Resends an OTP to a phone number
+   */
+  async sendOTP(phone: string) {
+    try {
+      const response = await fetch(`${API_URL}/auth/otp/send`, {
+        ...API_CONFIG,
+        method: 'POST',
+        body: JSON.stringify({ phone }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to send OTP');
+      }
+
+      return responseData;
+    } catch (error) {
+      console.error('Send OTP API Error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Verifies an OTP for a phone number
+   */
+  async verifyOTP(phone: string, otp: string) {
+    try {
+      const response = await fetch(`${API_URL}/auth/otp/verify`, {
+        ...API_CONFIG,
+        method: 'POST',
+        body: JSON.stringify({ phone, otp }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'OTP Verification failed');
+      }
+
+      return responseData;
+    } catch (error) {
+      console.error('Verify OTP API Error:', error);
+      throw error;
+    }
+  },
+
   /**
    * Performs Google Sign-In and authenticates with Firebase.
    */

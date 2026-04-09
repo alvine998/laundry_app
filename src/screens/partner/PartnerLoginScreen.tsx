@@ -14,7 +14,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PartnerLogin'>;
 
 export const PartnerLoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !email.includes('@')) {
@@ -27,8 +29,42 @@ export const PartnerLoginScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    // Now navigates to OTP instead of Home for email flow
-    navigation.navigate('OTP', { email, type: 'partner' });
+    if (!password.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password wajib diisi!',
+        position: 'top',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await AuthService.login({ email, password });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Login Berhasil!',
+        text2: 'Mohon masukkan kode verifikasi.',
+        position: 'top',
+      });
+
+      // Now navigates to OTP with phone from result
+      navigation.navigate('OTP', { 
+        email, 
+        phone: result.phone || '08123456789', // Fallback for testing
+        type: 'partner' 
+      });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Gagal Masuk',
+        text2: error.message || 'Email atau password mitra salah.',
+        position: 'top',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -86,7 +122,34 @@ export const PartnerLoginScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        <Button title="Lanjut ke Dashboard" onPress={handleLogin} variant="secondary" />
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Password Mitra</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Masukkan password Anda"
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons 
+                name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                size={normalize(20)} 
+                color="#64748B" 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <Button 
+          title={isLoading ? "Memproses..." : "Lanjut ke Dashboard"} 
+          onPress={handleLogin} 
+          variant="secondary" 
+          disabled={isLoading}
+        />
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
